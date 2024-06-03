@@ -10,6 +10,12 @@ LDFLAGS += -X "github.com/streamnative/pulsarctl/pkg/cmdutils.GoVersion=$(shell 
 GO := GO111MODULE=on go
 GOBUILD := $(GO) build
 
+COMMIT_ID := $(shell git rev-parse --short HEAD)
+IMAGE_NAME ?= docker.io/ascentstream/pulsarctl:dev-$(COMMIT_ID)
+IMAGE_CREDS ?= ""
+IMAGE_PLATFORMS ?= linux/amd64,linux/arm64
+GOVERSION=$(shell go env GOVERSION)
+
 # Build pulsarctl binary & docs
 
 cleancli:
@@ -26,9 +32,19 @@ cli: cleancli
 	tar -czvf ${PWD}/site/gen-pulsarctldocs/generators/pulsarctl-site-${VERSION}.tar.gz -C ${PWD}/site/gen-pulsarctldocs/generators/build/ .
 	mv ${PWD}/site/gen-pulsarctldocs/generators/pulsarctl-site-${VERSION}.tar.gz ${PWD}/pulsarctl-site-${VERSION}.tar.gz
 
-pulsarctl: 
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/pulsarctl
 
-.PHONY: install
-install:
-	go install github.com/streamnative/pulsarctl
+build-dist:
+	GOVERSION="$(GOVERSION)" goreleaser release --clean --snapshot --debug --verbose
+
+lint:
+	golangci-lint run
+
+build-image:
+	podman build --squash --platform $(IMAGE_PLATFORMS) --file docker/Dockerfile --manifest $(IMAGE_NAME) .
+
+publish-dist:
+	goreleaser release
+
+publish-image: build-image
+	podman manifest push $(IMAGE_NAME) docker://$(IMAGE_NAME) --creds $(IMAGE_CREDS)

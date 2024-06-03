@@ -1,0 +1,39 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 1
+
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+
+builds:
+  - goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/streamnative/pulsarctl/pkg/cmdutils.ReleaseVersion=ascentstream-{{.Version}}
+      - -X github.com/streamnative/pulsarctl/pkg/cmdutils.BuildTS={{.Date}}
+      - -X github.com/streamnative/pulsarctl/pkg/cmdutils.GitHash={{.FullCommit}}
+      - -X github.com/streamnative/pulsarctl/pkg/cmdutils.GitBranch={{.Branch}}
+      - -X github.com/streamnative/pulsarctl/pkg/cmdutils.GoVersion={{.Env.GOVERSION}}
+    env:
+      - GIN_MODE=release
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: "{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: "{{ .ProjectName }}-v{{ .Version }}-checksums.txt"
